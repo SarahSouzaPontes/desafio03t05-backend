@@ -24,7 +24,7 @@ rotas.get('/categoria', dindin.listarCategorias);
 rotas.get('/transacao', dindin.listarTransações);
 rotas.get('/transacao/:id', dindin.detalharTransacao);
 rotas.post('`/transacao', dindin.cadastrarTransacaoDoUsuarioLogado);
-rotas.put('/transacao/:id', dindin.atualizarTransaçãoDoUsuárioLogado);
+rotas.put('/transacao/:id', dindin.atualizarTransaçãoDoUsuarioLogado);
 rotas.put('/transacao/:id', dindin.editarTransacao);
 rotas.delete('`/transacao/:id', dindin.removerTransacao);
 rotas.get('`/transacao/extrato', dindin.obterExtratoDeTransacoes);
