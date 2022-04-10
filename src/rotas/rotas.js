@@ -1,5 +1,5 @@
 const express = require('express');
-const cubosbank = require('./controladores/cubosbank');
+const dindin = require('../controladores/dindin');
 const rotas = express();
 /*
 -   Cadastrar Usuário  `POST` `/usuario`
@@ -23,10 +23,10 @@ rotas.get('/usuario', dindin.detalharPerfilDoUsuarioLogado);
 rotas.get('/categoria', dindin.listarCategorias);
 rotas.get('/transacao', dindin.listarTransações);
 rotas.get('/transacao/:id', dindin.detalharTransacao);
-rotas.post('`/transacao', dindin.cadastrarTransacaoDoUsuarioLogado);
+rotas.post('/transacao', dindin.cadastrarTransacaoDoUsuarioLogado);
 rotas.put('/transacao/:id', dindin.atualizarTransaçãoDoUsuarioLogado);
 rotas.put('/transacao/:id', dindin.editarTransacao);
-rotas.delete('`/transacao/:id', dindin.removerTransacao);
+rotas.delete('/transacao/:id', dindin.removerTransacao);
 rotas.get('`/transacao/extrato', dindin.obterExtratoDeTransacoes);
 
 module.exports = rotas;
