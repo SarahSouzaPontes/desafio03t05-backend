@@ -19,7 +19,6 @@ const jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
 
 
-
 const cadastrarUsuario = async (req, res) => {
     const { nome, email, senha } = req.body;
     if (!nome) return res.status(400).json('Nome é obrigatório!');
@@ -38,18 +37,20 @@ const cadastrarUsuario = async (req, res) => {
 }
 const fazerLogin = async (req, res) => {
     const { email, senha } = req.body;
-    if (!email) return res.status(400).json('Email é obrigatório!');
-    if (!senha) return res.status(400).json('Senha é obrigatório!');
+    if (!email) return res.status(400).json({ "mensagem": 'Email é obrigatório!' });
+    if (!senha) return res.status(400).json({ "mensagem": 'Senha é obrigatório!' });
     try {
         const query = 'select * from usuarios where email = $1';
         const { rowCount, rows } = await conexao.query(query, [email]);
-        if (!rowCount) return res.status(400).json('Email ou Senha incorretos');
+        if (!rowCount) return res.status(400).json({
+            "mensagem": "Usuário e/ou senha inválido(s)."
+        });
         const usuario = rows[0];
         const senhaVerificada = await bcrypt.compare(senha, usuario.senha)
-        if (!senhaVerificada) return res.status(400).json('Senha incorretos');
+        if (!senhaVerificada) return res.status(400).json({ "mensagem": 'Senha incorretos' });
         const token = jwt.sign({
-            id: usuario
-                .id, name: usuario.nome
+            id: usuario.id,
+            name: usuario.nome
         }, segredo, { expiresIn: '1d' })
         return res.status(200).json(token)
     } catch (error) {
@@ -57,30 +58,48 @@ const fazerLogin = async (req, res) => {
     }
 }
 const atualizarUsuario = async (req, res) => {
-    const { nome, email, senha } = req.body;
-    if (!nome) return res.status(400).json('Nome é obrigatório!');
-    if (!email) return res.status(400).json('Email é obrigatório!');
-    if (!senha) return res.status(400).json('Senha é obrigatório!');
-    try {
+    const token = getTokenBearer(req, res)
 
-        let query = 'select * from usuarios where email=$1 values ($1)';
-        let { rowCount } = await conexao.query(query, [email]);
-        if (rowCount) return res.status(400).json('Email já existente!');
-        else {
+    if (token) {
+        usuario = verificaToken(token);
+        if (!usuario) return res.status(400).json({ "mensagem": 'Token Inválido' });
 
-            const hashSenha = await bcrypt.hash(senha, 10);
-            query = 'update into usuarios(nome, email,senha) values ($1,$2,$3)';
-            rowCount = await conexao.query(query, [nome, email, hashSenha])
-            if (!rowCount) return res.status(400).json('Usário não cadastrado!')
-            return res.status(201).json('Usuário criado com sucesso!')
+        const { nome, email, senha } = req.body;
+        if (!nome) return res.status(400).json({ "mensagem": 'Nome é obrigatório!' });
+        if (!email) return res.status(400).json({ "mensagem": 'Email é obrigatório!' });
+        if (!senha) return res.status(400).json({ "mensagem": 'Senha é obrigatório!' });
+
+        try {
+            let query = 'select * from usuarios where email=$1';
+            let { rowCount } = await conexao.query(query, [email]);
+            if (rowCount) return res.status(400).json({ "mensagem": "O e-mail informado já está sendo utilizado por outro usuário." });
+            else {
+                const hashSenha = await bcrypt.hash(senha, 10);
+                query = 'update usuarios set nome = $1, email = $2, senha = $3 where id = $4';
+                rowCount = await conexao.query(query, [nome, email, hashSenha, usuario.id])
+                if (!rowCount) return res.status(400).json({ "mensagem": 'Usário não cadastrado!' })
+                return res.status(201).json({ "mensagem": 'Usuário atualizado com sucesso!' })
+            }
+        } catch (error) {
+            return res.status(500).json(error.message)
         }
-    } catch (error) {
-        return res.status(500).json(error.message)
 
+    } else {
+        return res.status(400).json({ "mensagem": "Para acessar este recurso um token de autenticação válido deve ser enviado." })
     }
-
 }
 const detalharPerfilDoUsuarioLogado = async (req, res) => {
+    const token = getTokenBearer(req, res)
+    usuario = verificaToken(token);
+    if (!usuario) return res.status(400).json({ "mensagem": "Para acessar este recurso um token de autenticação válido deve ser enviado." });
+    query = "select id, nome, email from usuarios where id = $1"
+    try {
+        rowCount = await conexao.query(query, [usuario.id])
+        return res.status(200).json(rowCount.rows[0])
+    } catch (error) {
+        return res.status(500).json(error.message)
+    }
+
 }
 const listarCategorias = async (req, res) => {
     /* const {senha_banco} = req.query;
@@ -123,7 +142,7 @@ const cadastrarTransacaoDoUsuarioLogado = async (req, res) => {
         return res.status(201).json('Usuário criado com sucesso!')
     } catch (error) {
         return res.status(500).json(error.message)
-
+ 
     }*/
 }
 const atualizarTransaçãoDoUsuarioLogado = async (req, res) => {
@@ -148,6 +167,31 @@ const editarTransacao = async (req, res) => {
 const removerTransacao = async (req, res) => {
 }
 const obterExtratoDeTransacoes = async (req, res) => {
+}
+
+function getTokenBearer(req, res) {
+    const bearerheader = req.headers['authorization'];
+    if (typeof bearerheader !== 'undefined') {
+
+        const bearer = bearerheader.split(' ')
+        const bearerToken = bearer[1]
+        return bearerToken
+    }
+    else {
+        return null
+    }
+}
+function verificaToken(token) {
+
+    try {
+        usuario = jwt.verify(token, segredo);
+        return usuario
+    }
+    catch (error) {
+        return null
+    }
+
+
 }
 
 module.exports = {
