@@ -102,17 +102,18 @@ const detalharPerfilDoUsuarioLogado = async (req, res) => {
 
 }
 const listarCategorias = async (req, res) => {
-    /* const {senha_banco} = req.query;
- 
-     if(!senha_banco){
-         return res.status(400).json({"mensagem" : "Campo senha é obrigatório."});
-     }
-     else if(senha_banco!==bancodedados.banco.senha) {
-         return res.status(400).json({"mensagem" : "Senha incorreta"});
-     }
- 
-     return res.status(200).json(bancodedados.contas);
-     */
+    const token = getTokenBearer(req, res)
+    console.log(token)
+    usuario = verificaToken(token);
+    if (!usuario) return res.status(400).json({ "mensagem": "Para acessar este recurso um token de autenticação válido deve ser enviado." });
+    query = "select * from categoria "
+    try {
+        rows = await conexao.query(query)
+        return res.status(200).json(rows.rows)
+    } catch (error) {
+        return res.status(500).json(error.message)
+
+    }
 }
 const listarTransações = async (req, res) => {
     /* const {senha_banco} = req.query;
