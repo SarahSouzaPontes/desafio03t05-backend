@@ -103,7 +103,6 @@ const detalharPerfilDoUsuarioLogado = async (req, res) => {
 }
 const listarCategorias = async (req, res) => {
     const token = getTokenBearer(req, res)
-    console.log(token)
     usuario = verificaToken(token);
     if (!usuario) return res.status(400).json({ "mensagem": "Para acessar este recurso um token de autenticação válido deve ser enviado." });
     query = "select * from categoria "
@@ -115,53 +114,52 @@ const listarCategorias = async (req, res) => {
 
     }
 }
-const listarTransações = async (req, res) => {
-    /* const {senha_banco} = req.query;
- 
-    if(!senha_banco){
-        return res.status(400).json({"mensagem" : "Campo senha é obrigatório."});
+
+const cadastrarTransacao = async (req, res) => {
+    const token = getTokenBearer(req, res)
+    const usuario = verificaToken(token);
+    if (!usuario) return res.status(400).json({ "mensagem": "Para acessar este recurso um token de autenticação válido deve ser enviado." });
+    const { tipo, descricao, valor, data, categoria_id } = req.body
+    if (!tipo) return res.status(400).json({ "mensagem": "Todos os campos obrigatórios devem ser informados." })
+    if (!descricao) return res.status(400).json({ "mensagem": "Todos os campos obrigatórios devem ser informados." })
+    if (!valor) return res.status(400).json({ "mensagem": "Todos os campos obrigatórios devem ser informados." })
+    if (!data) return res.status(400).json({ "mensagem": "Todos os campos obrigatórios devem ser informados." })
+    if (!categoria_id) return res.status(400).json({ "mensagem": "Todos os campos obrigatórios devem ser informados." })
+    if (!(tipo === 'entrada' || tipo === 'saida')) return res.status(400).json({ "mensagem": "O tipo deve ser entrada ou saida" })
+
+    try {
+        let { rows, rowCount } = await conexao.query('select descricao from categoria where id=$1', [categoria_id])
+        if (!rowCount) return res.status(404).json({ "mensagem": "Categoria informada não existe" })
+        const categoria_name = rows[0].descricao
+        query = "insert into transacao(descricao, valor, data, categoria_id, usuario_id, tipo) values ($1, $2, $3, $4, $5, $6) RETURNING id "
+        rows = await conexao.query(query, [descricao, valor, data, categoria_id, usuario.id, tipo]);
+        console.log(rows.rows[0].id);
+        return res.status(200).json({
+
+            "id": rows.rows[0].id,
+            "tipo": tipo,
+            "descricao": descricao,
+            "valor": valor,
+            "data": data,
+            "usuario_id": usuario.id,
+            "categoria_id": categoria_id,
+            "categoria_nome": categoria_name,
+
+        })
+
+
+    } catch (error) {
+        return res.status(500).json(error.message)
     }
-    else if(senha_banco!==bancodedados.banco.senha) {
-        return res.status(400).json({"mensagem" : "Senha incorreta"});
-    }
- 
-    return res.status(200).json(bancodedados.contas);
-    */
+}
+const listarTransacao = async (req, res) => {
+
 }
 const detalharTransacao = async (req, res) => {
 }
-const cadastrarTransacaoDoUsuarioLogado = async (req, res) => {
-    /* es const { nome, email, senha } = req.body;
-    if (!nome) return res.status(400).json('Nome é obrigatório!');
-    if (!email) return res.status(400).json('Email é obrigatório!');
-    if (!senha) return res.status(400).json('Senha é obrigatório!');
-    try {
-        const hashSenha = await bcrypt.hash(senha, 10);
-        const query = 'insert into usuarios(nome, email,senha) values ($1,$2,$3)';
-        const { rowCount } = await conexao.query(query, [nome, email, hashSenha])
-        if (!rowCount) return res.status(400).json('Usário não cadastrado!')
-        return res.status(201).json('Usuário criado com sucesso!')
-    } catch (error) {
-        return res.status(500).json(error.message)
- 
-    }*/
-}
-const atualizarTransaçãoDoUsuarioLogado = async (req, res) => {
-    /*  const { numeroConta } = req.params;
-   const { nome,
-         cpf,
-         data_nascimento,
-         telefone,
-         email,
-         senha } = req.body;
-     if (!nome) {
-         return res.status(400).json('Mensagem: campo nome obrigatório');
-     }
- 
-     if (!cpf) {
-         return res.status(400).json('Mensagem: campo CPF obrigatório');
-     }
-     */
+
+const atualizarTransacao = async (req, res) => {
+
 }
 const editarTransacao = async (req, res) => {
 }
@@ -201,10 +199,10 @@ module.exports = {
     atualizarUsuario,
     detalharPerfilDoUsuarioLogado,
     listarCategorias,
-    listarTransações,
+    listarTransacao,
     detalharTransacao,
-    cadastrarTransacaoDoUsuarioLogado,
-    atualizarTransaçãoDoUsuarioLogado,
+    cadastrarTransacao,
+    atualizarTransacao,
     editarTransacao,
     removerTransacao,
     obterExtratoDeTransacoes
