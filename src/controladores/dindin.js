@@ -78,7 +78,7 @@ const atualizarUsuario = async (req, res) => {
                 query = 'update usuarios set nome = $1, email = $2, senha = $3 where id = $4';
                 rowCount = await conexao.query(query, [nome, email, hashSenha, usuario.id])
                 if (!rowCount) return res.status(400).json({ "mensagem": 'Usário não cadastrado!' })
-                return res.status(201).json({ "mensagem": 'Usuário atualizado com sucesso!' })
+                return res.status(201).send()
             }
         } catch (error) {
             return res.status(500).json(error.message)
@@ -133,7 +133,6 @@ const cadastrarTransacao = async (req, res) => {
         const categoria_name = rows[0].descricao
         query = "insert into transacao(descricao, valor, data, categoria_id, usuario_id, tipo) values ($1, $2, $3, $4, $5, $6) RETURNING id "
         rows = await conexao.query(query, [descricao, valor, data, categoria_id, usuario.id, tipo]);
-        console.log(rows.rows[0].id);
         return res.status(200).json({
 
             "id": rows.rows[0].id,
@@ -153,19 +152,108 @@ const cadastrarTransacao = async (req, res) => {
     }
 }
 const listarTransacao = async (req, res) => {
+    const token = getTokenBearer(req, res)
+    const usuario = verificaToken(token);
+    if (!usuario) return res.status(400).json({ "mensagem": "Para acessar este recurso um token de autenticação válido deve ser enviado." });
+    const query = "select * from transacao where usuario_id = $1"
+    try {
+        let { rows, rowCount } = await conexao.query(query, [usuario.id])
+        if (!rowCount) return res.status(404).json({ "mensagem": "Não exitem transações cadastradas" })
+        return res.status(200).json(rows)
+    } catch (error) {
+        return res.status(500).json(error.message)
+    }
 
 }
 const detalharTransacao = async (req, res) => {
+    const token = getTokenBearer(req, res)
+    const usuario = verificaToken(token);
+    if (!usuario) return res.status(400).json({ "mensagem": "Para acessar este recurso um token de autenticação válido deve ser enviado." });
+    const { id } = req.params
+    const query = "select * from transacao where usuario_id = $1 and id = $2"
+    try {
+        let { rows, rowCount } = await conexao.query(query, [usuario.id, id])
+        if (!rowCount) return res.status(404).json({ "mensagem": "Transação não encontrada." })
+        return res.status(200).json(rows)
+    } catch (error) {
+        return res.status(500).json(error.message)
+    }
 }
 
 const atualizarTransacao = async (req, res) => {
+    const token = getTokenBearer(req, res)
+    const usuario = verificaToken(token);
+    if (!usuario) return res.status(400).json({ "mensagem": "Para acessar este recurso um token de autenticação válido deve ser enviado." });
+    const { id } = req.params
+    const { descricao, valor, data, categoria_id, tipo } = req.body
+
+    if (!descricao) return res.status(400).json({ "mensagem": "Todos os campos obrigatórios devem ser informados." })
+    if (!valor) return res.status(400).json({ "mensagem": "Todos os campos obrigatórios devem ser informados." })
+    if (!data) return res.status(400).json({ "mensagem": "Todos os campos obrigatórios devem ser informados." })
+    if (!categoria_id) return res.status(400).json({ "mensagem": "Todos os campos obrigatórios devem ser informados." })
+    if (!tipo) return res.status(400).json({ "mensagem": "Todos os campos obrigatórios devem ser informados." })
+    if (!(tipo === 'entrada' || tipo === 'saida')) return res.status(400).json({ "mensagem": "O tipo deve ser entrada ou saida" })
+
+    const query = "update transacao set \
+    descricao =$3, \
+    valor = $4, \
+    data=$5, \
+    categoria_id=$6, \
+    tipo=$7 where usuario_id = $1 and id =$2"
+    try {
+        let { rowCount } = await conexao.query(query, [usuario.id, id, descricao, valor, data, categoria_id, tipo])
+        console.log(rowCount)
+        if (!rowCount) return res.status(404).json({ "mensagem": "Transação não encontrada." })
+        else return res.status(200).send()
+    } catch (error) {
+        return res.status(500).json(error.message)
+    }
 
 }
-const editarTransacao = async (req, res) => {
-}
+
 const removerTransacao = async (req, res) => {
+    const token = getTokenBearer(req, res)
+    const usuario = verificaToken(token);
+    if (!usuario) return res.status(400).json({ "mensagem": "Para acessar este recurso um token de autenticação válido deve ser enviado." });
+    const { id } = req.params
+    const query = "delete from transacao where usuario_id = $1 and id = $2"
+    try {
+        let { rowCount } = await conexao.query(query, [usuario.id, id])
+        if (!rowCount) return res.status(404).json({ "mensagem": "Transação não encontrada." })
+        return res.status(200).send()
+    } catch (error) {
+        return res.status(500).json(error.message)
+    }
 }
 const obterExtratoDeTransacoes = async (req, res) => {
+    const token = getTokenBearer(req, res)
+    const usuario = verificaToken(token);
+    if (!usuario) return res.status(400).json({ "mensagem": "Para acessar este recurso um token de autenticação válido deve ser enviado." });
+    let _entrada = 0
+    let _saida = 0
+    const query = "select * from transacao where usuario_id = $1"
+    try {
+        let { rows, rowCount } = await conexao.query(query, [usuario.id])
+        if (!rowCount) return res.status(404).json({ "mensagem": "Não exitem transações cadastradas" })
+        rows.forEach(row => {
+            if (row.tipo === "entrada") {
+                console.log(row.valor)
+                _entrada = _entrada + parseInt(row.valor)
+            } else {
+                _saida = _saida + parseInt(row.valor)
+            }
+
+        });
+        return res.status(200).json({
+            "entrada": _entrada,
+            "saida": _saida
+        })
+
+
+    } catch (error) {
+        return res.status(500).json(error.message)
+    }
+
 }
 
 function getTokenBearer(req, res) {
@@ -203,7 +291,6 @@ module.exports = {
     detalharTransacao,
     cadastrarTransacao,
     atualizarTransacao,
-    editarTransacao,
     removerTransacao,
     obterExtratoDeTransacoes
 }
